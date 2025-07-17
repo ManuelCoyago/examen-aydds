@@ -110,6 +110,9 @@ def get_product_by_code(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return product
 
+@app.get("/productos", response_model=list[ProductOut])
+def list_products(db: Session = Depends(get_db)):
+    return db.query(models.Product).all()
 
 
 
@@ -176,3 +179,4 @@ def get_sale(sale_id: int, db: Session = Depends(get_db)):
         "quantity": sale.quantity,
         "date": sale.date
     }
+
