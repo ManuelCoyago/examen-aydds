@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Inventario</h1>
+        
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('productos')">Productos</button>
+            <button class="tab-button" onclick="openTab('clientes')">Clientes</button>
+            <button class="tab-button" onclick="openTab('ventas')">Ventas</button>
+        </div>
+        
+        <!-- Sección Productos -->
+        <div id="productos" class="tab-content" style="display: block;">
+            <h2>Gestión de Productos</h2>
+            <form id="productoForm">
+                <input type="text" id="productoNombre" placeholder="Nombre" required>
+                <input type="text" id="productoDescripcion" placeholder="Descripción">
+                <input type="number" id="productoPrecio" placeholder="Precio" step="0.01" required>
+                <input type="number" id="productoStock" placeholder="Stock" required>
+                <button type="submit">Agregar Producto</button>
+            </form>
+            
+            <h3>Inventario</h3>
+            <h3>Buscar Producto por Código de Barras</h3>
+                <form id="buscarCodigoForm">
+                    <input type="text" id="codigoBusqueda" placeholder="Escanea o escribe el código EAN13" required>
+                    <button type="submit">Buscar</button>
+                </form>
+                <div id="resultadoBusqueda"></div>
+
+            <div id="inventarioLista"></div>
+        </div>
+        
+        <!-- Sección Clientes -->
+        <div id="clientes" class="tab-content">
+            <h2>Gestión de Clientes</h2>
+            <form id="clienteForm">
+                <input type="text" id="clienteNombre" placeholder="Nombre" required>
+                <input type="email" id="clienteEmail" placeholder="Email" required>
+                <button type="submit">Agregar Cliente</button>
+            </form>
+            
+            <h3>Lista de Clientes</h3>
+            <div id="clientesLista"></div>
+        </div>
+        
+        <!-- Sección Ventas -->
+        <div id="ventas" class="tab-content">
+            <h2>Registro de Ventas</h2>
+            <form id="ventaForm">
+                <select id="ventaCliente" required></select>
+                <select id="ventaProducto" required></select>
+                <input type="number" id="ventaCantidad" placeholder="Cantidad" required>
+                <button type="submit">Registrar Venta</button>
+            </form>
+            
+            <h3>Historial de Ventas</h3>
+            <div id="ventasLista"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
