@@ -136,7 +136,16 @@ def register_sale(s: SaleIn, db: Session = Depends(get_db)):
     sale = models.Sale(**s.dict())
     db.add(sale)
     db.commit()
-    return {"message": "Venta registrada y stock actualizado"}
+
+    response = {
+        "message": "Venta registrada y stock actualizado"
+    }
+
+    if product.stock < 5:
+        response["alert"] = f"¡Atención! El stock del producto '{product.name}' es bajo: {product.stock} unidades"
+
+    return response
+
 
 @app.get("/ventas")
 def list_sales(db: Session = Depends(get_db)):
@@ -167,5 +176,3 @@ def get_sale(sale_id: int, db: Session = Depends(get_db)):
         "quantity": sale.quantity,
         "date": sale.date
     }
-
-

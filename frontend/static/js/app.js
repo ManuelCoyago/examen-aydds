@@ -195,13 +195,18 @@ async function addSale(event) {
     
     const result = await response.json();
     if (result.error) {
-        alert(result.error);
-    } else {
-        alert(result.message);
-        loadSales();
-        loadProducts(); // Para actualizar el stock
-        this.reset();
+    alert(result.error);
+} else {
+    let mensaje = result.message;
+    if (result.alert) {
+        mensaje += `\n\n${result.alert}`;
     }
+    alert(mensaje);
+    loadSales();
+    loadProducts(); // Para actualizar el stock
+    this.reset();
+}
+
 }
 
 // Funciones auxiliares
