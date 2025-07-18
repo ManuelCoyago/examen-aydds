@@ -235,6 +235,8 @@ async function submitSale() {
   alert(`${result.message}\nTotal: $${result.total.toFixed(2)}`);
   document.querySelector('#tablaProductosVenta tbody').innerHTML = '';
   loadSales(); loadProducts();
+  verificarStockBajo();
+
 }
 
 function updateCustomerSelect(customers) {
@@ -307,3 +309,37 @@ function addProductLine() {
     tbody.appendChild(tr);
   });
 }
+
+const UMBRAL_STOCK_BAJO = 5;
+
+async function verificarStockBajo() {
+  try {
+    const response = await fetch('/productos');
+    const productos = await response.json();
+    
+    console.log("Productos cargados:", productos);  // <-- Verifica si llegan productos
+
+    const productosBajos = productos.filter(p => {
+      console.log(`Producto: ${p.name}, Stock: ${p.stock}`);
+      return p.stock < UMBRAL_STOCK_BAJO;
+    });
+
+    if (productosBajos.length > 0) {
+      let mensaje = "⚠️ ¡Atención! Los siguientes productos tienen stock bajo:\n\n";
+      productosBajos.forEach(p => {
+        mensaje += `- ${p.name} (stock: ${p.stock})\n`;
+      });
+      Swal.fire({
+  icon: 'warning',
+  title: '⚠️ ¡Atención!',
+  html: mensaje.replaceAll('\n', '<br>'),
+});
+
+    } else {
+      console.log("No hay productos con stock bajo");
+    }
+  } catch (error) {
+    console.error("Error al verificar stock bajo:", error);
+  }
+}
+
