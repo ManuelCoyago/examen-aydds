@@ -106,6 +106,8 @@ async function loadCustomers() {
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Email</th>
+                    <th>Cédula</th>
+                    <th>Teléfono</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,6 +116,8 @@ async function loadCustomers() {
                         <td>${customer.id}</td>
                         <td>${customer.name}</td>
                         <td>${customer.email}</td>
+                        <td>${customer.cedula}</td>
+                        <td>${customer.phone || 'N/A'}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -127,23 +131,38 @@ async function loadCustomers() {
 async function addCustomer(event) {
     event.preventDefault();
     
-    const customer = {
+    const customerData = {
         name: document.getElementById('clienteNombre').value,
-        email: document.getElementById('clienteEmail').value
+        email: document.getElementById('clienteEmail').value,
+        cedula: document.getElementById('clienteCedula').value,
+        phone: document.getElementById('clienteTelefono').value
     };
+
+    console.log("Datos a enviar:", JSON.stringify(customerData, null, 2));
     
-    const response = await fetch('/clientes', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(customer)
-    });
-    
-    const result = await response.json();
-    alert(result.message);
-    loadCustomers();
-    this.reset();
+    try {
+        const response = await fetch('http://localhost:8000/clientes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(customerData)
+        });
+
+        if (!response.ok) {
+            const errorDetails = await response.json();
+            console.error("Error completo:", errorDetails);
+            throw new Error(errorDetails.detail || "Error del servidor");
+        }
+
+        const result = await response.json();
+        alert(result.message);
+        loadCustomers();
+        event.target.reset();
+    } catch (error) {
+        console.error("Error completo:", error);
+        alert(`Error: ${error.message}`);
+    }
 }
 
 // Funciones para ventas
@@ -157,18 +176,20 @@ async function loadSales() {
             <thead>
                 <tr>
                     <th>ID Venta</th>
-                    <th>Cliente</th>
+                    <th>Cédula Cliente</th>
                     <th>Producto</th>
                     <th>Cantidad</th>
+                    <th>Fecha</th>
                 </tr>
             </thead>
             <tbody>
                 ${sales.map(sale => `
                     <tr>
-                        <td>${sale.id}</td>
-                        <td>${sale.customer_id}</td>
-                        <td>${sale.product_id}</td>
+                        <td>${sale.sale_id}</td>
+                        <td>${sale.customer_cedula}</td>
+                        <td>${sale.product_name}</td>
                         <td>${sale.quantity}</td>
+                        <td>${new Date(sale.date).toLocaleString()}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -180,7 +201,7 @@ async function addSale(event) {
     event.preventDefault();
     
     const sale = {
-        customer_id: parseInt(document.getElementById('ventaCliente').value),
+        customer_cedula: document.getElementById('ventaCliente').value,
         product_id: parseInt(document.getElementById('ventaProducto').value),
         quantity: parseInt(document.getElementById('ventaCantidad').value)
     };
@@ -195,25 +216,23 @@ async function addSale(event) {
     
     const result = await response.json();
     if (result.error) {
-    alert(result.error);
-} else {
-    let mensaje = result.message;
-    if (result.alert) {
-        mensaje += `\n\n${result.alert}`;
+        alert(result.error);
+    } else {
+        let mensaje = result.message;
+        if (result.alert) {
+            mensaje += `\n\n${result.alert}`;
+        }
+        alert(mensaje);
+        loadSales();
+        loadProducts(); // Para actualizar el stock
+        this.reset();
     }
-    alert(mensaje);
-    loadSales();
-    loadProducts(); // Para actualizar el stock
-    this.reset();
 }
 
-}
-
-// Funciones auxiliares
 function updateCustomerSelect(customers) {
     const select = document.getElementById('ventaCliente');
     select.innerHTML = customers.map(c => 
-        `<option value="${c.id}">${c.name} (${c.email})</option>`
+        `<option value="${c.cedula}">${c.cedula} - ${c.name}</option>`
     ).join('');
 }
 

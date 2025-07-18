@@ -9,6 +9,8 @@ class Customer(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     email = Column(String)
+    cedula = Column(String, unique=True)  # <- aquí debe estar esta columna
+    phone = Column(String)  # <- aquí debe estar esta columna
 
 class Product(Base):
     __tablename__ = "products"
