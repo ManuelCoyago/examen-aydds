@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 import os
 
 from fastapi import HTTPException
-from models import Customer, Product, Sale  # Asegúrate de importar tus modelos
+from models import Customer, Product, Sale,SaleGroup # Asegúrate de importar tus modelos
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -121,92 +121,142 @@ def get_inventory(db: Session = Depends(get_db)):
     return db.query(models.Product).all()
 
 # VENTAS
-class SaleIn(BaseModel):
-    customer_cedula: str
+class SaleItem(BaseModel):
     product_id: int
     quantity: int
 
+class SaleIn(BaseModel):
+    customer_cedula: str
+    items: list[SaleItem]
+
 @app.post("/ventas")
 def register_sale(s: SaleIn, db: Session = Depends(get_db)):
-    # Buscar cliente por cédula
+    # Buscar cliente
     customer = db.query(models.Customer).filter(models.Customer.cedula == s.customer_cedula).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    
-    # Buscar producto
-    product = db.query(models.Product).get(s.product_id)
-    if not product:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
-    # Validar stock
-    if product.stock < s.quantity:
-        raise HTTPException(status_code=400, detail="Stock insuficiente")
 
-    # Actualizar stock
-    product.stock -= s.quantity
-    
-    # Crear venta
-    sale = models.Sale(
-        customer_id=customer.id,
-        product_id=s.product_id,
-        quantity=s.quantity
-    )
-    
-    db.add(sale)
+    total = 0
+    sale_details = []
+
+    # Crear grupo de venta
+    group = models.SaleGroup(customer_id=customer.id)
+    db.add(group)
+    db.flush()  # Para obtener el ID del grupo
+
+    for item in s.items:
+        product = db.query(models.Product).get(item.product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Producto con ID {item.product_id} no encontrado")
+        if product.stock < item.quantity:
+            raise HTTPException(status_code=400, detail=f"Stock insuficiente para {product.name} (ID {product.id})")
+
+        # Descontar stock
+        product.stock -= item.quantity
+
+        # Registrar detalle de venta
+        sale = models.Sale(
+            group_id=group.id,
+            product_id=product.id,
+            quantity=item.quantity
+        )
+        db.add(sale)
+        db.flush()
+
+        sale_details.append({
+            "product_id": product.id,
+            "product_name": product.name,
+            "quantity": item.quantity,
+            "unit_price": product.price,
+            "subtotal": item.quantity * product.price,
+            "sale_id": sale.id
+        })
+
+        total += item.quantity * product.price
+
     db.commit()
-    
-    # Preparar respuesta
-    response = {
-        "message": f"Venta registrada para {customer.name} (Cédula: {customer.cedula})",
-        "customer_cedula": customer.cedula
+
+    return {
+        "message": f"Venta registrada para {customer.name}",
+        "sale_id": group.id,
+        "customer": {
+            "cedula": customer.cedula,
+            "name": customer.name
+        },
+        "details": sale_details,
+        "total": total
     }
-    
-    # Alertar si el stock es bajo
-    if product.stock < 5:
-        response["alert"] = f"¡Atención! Stock bajo de {product.name}: {product.stock} unidades restantes"
-    
-    return response
+
+
 
 @app.get("/ventas")
 def list_sales(db: Session = Depends(get_db)):
-    sales = db.query(models.Sale).all()
+    groups = db.query(models.SaleGroup).all()
     result = []
-    for sale in sales:
-        customer = db.query(models.Customer).filter(models.Customer.id == sale.customer_id).first()
-        product = db.query(models.Product).filter(models.Product.id == sale.product_id).first()
+
+    for group in groups:
+        customer = group.customer
+        details = []
+        total = 0
+
+        for sale in group.items:
+            product = sale.product
+            subtotal = sale.quantity * product.price
+            total += subtotal
+
+            details.append({
+                "product_id": product.id,
+                "product_name": product.name,
+                "quantity": sale.quantity,
+                "unit_price": product.price,
+                "subtotal": subtotal
+            })
+
         result.append({
-            "sale_id": sale.id,
-            "customer_cedula": customer.cedula if customer else "N/A",
-            "product_name": product.name if product else "N/A",
-            "quantity": sale.quantity,
-            "date": sale.date
+            "sale_id": group.id,
+            "date": group.date,
+            "customer": {
+                "cedula": customer.cedula,
+                "name": customer.name
+            },
+            "details": details,
+            "total": total
         })
+
     return result
 
-@app.get("/ventas/{sale_id}")
-def get_sale(sale_id: int, db: Session = Depends(get_db)):
-    sale = db.query(models.Sale).get(sale_id)
-    if not sale:
-        return {"error": "Venta no encontrada"}
-    
-    customer = db.query(models.Customer).get(sale.customer_id)
-    product = db.query(models.Product).get(sale.product_id)
-    
+
+
+@app.get("/ventas/{id}")
+def get_sale(id: int, db: Session = Depends(get_db)):
+    group = db.query(models.SaleGroup).filter(models.SaleGroup.id == id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+
+    customer = group.customer
+    details = []
+    total = 0
+
+    for sale in group.items:
+        product = sale.product
+        subtotal = sale.quantity * product.price
+        total += subtotal
+
+        details.append({
+            "product_id": product.id,
+            "product_name": product.name,
+            "quantity": sale.quantity,
+            "unit_price": product.price,
+            "subtotal": subtotal
+        })
+
     return {
-        "sale_id": sale.id,
+        "sale_id": group.id,
+        "date": group.date,
         "customer": {
             "cedula": customer.cedula,
-            "name": customer.name,
-            "email": customer.email,
-            "phone": customer.phone
+            "name": customer.name
         },
-        "product": {
-            "id": product.id,
-            "name": product.name,
-            "description": product.description,
-            "price": product.price,
-            "stock": product.stock
-        },
-        "quantity": sale.quantity,
-        "date": sale.date
+        "details": details,
+        "total": total
     }

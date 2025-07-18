@@ -7,9 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar formularios
     document.getElementById('productoForm').addEventListener('submit', addProduct);
     document.getElementById('clienteForm').addEventListener('submit', addCustomer);
-    document.getElementById('ventaForm').addEventListener('submit', addSale);
     document.getElementById('buscarCodigoForm').addEventListener('submit', buscarPorCodigo);
-
+    document.getElementById('btnAddLinea').addEventListener('click', addProductLine);
+    document.getElementById('btnRegistrarVenta').addEventListener('click', submitSale);
 });
 
 // Funciones para cambiar pestañas
@@ -165,68 +165,76 @@ async function addCustomer(event) {
     }
 }
 
-// Funciones para ventas
 async function loadSales() {
-    const response = await fetch('/ventas');
-    const sales = await response.json();
-    
-    const saleList = document.getElementById('ventasLista');
-    saleList.innerHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>ID Venta</th>
-                    <th>Cédula Cliente</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${sales.map(sale => `
-                    <tr>
-                        <td>${sale.sale_id}</td>
-                        <td>${sale.customer_cedula}</td>
-                        <td>${sale.product_name}</td>
-                        <td>${sale.quantity}</td>
-                        <td>${new Date(sale.date).toLocaleString()}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
+    const res = await fetch('/ventas');
+    const sales = await res.json();
+
+    const tbody = document.querySelector('#tablaVentas tbody');
+    tbody.innerHTML = ''; // Limpia contenido anterior
+
+    sales.forEach(sale => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sale.sale_id}</td>
+            <td>${sale.customer.cedula} - ${sale.customer.name}</td>
+            <td>
+                <ul>
+                    ${sale.details.map(item => `
+                        <li>${item.product_name} (x${item.quantity}) - $${item.unit_price} = $${item.subtotal}</li>
+                    `).join('')}
+                </ul>
+            </td>
+            <td>$${sale.total}</td>
+            <td>${new Date(sale.date).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+    });
 }
 
-async function addSale(event) {
-    event.preventDefault();
-    
-    const sale = {
-        customer_cedula: document.getElementById('ventaCliente').value,
-        product_id: parseInt(document.getElementById('ventaProducto').value),
-        quantity: parseInt(document.getElementById('ventaCantidad').value)
-    };
-    
-    const response = await fetch('/ventas', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sale)
+
+function addProductLine() {
+    const container = document.getElementById('productosVenta');
+
+    const div = document.createElement('div');
+    div.innerHTML = `
+        <select class="ventaProducto" required></select>
+        <input type="number" class="ventaCantidad" placeholder="Cantidad" required>
+    `;
+    container.appendChild(div);
+
+    // Llenar el nuevo select
+    fetch('/inventario').then(res => res.json()).then(products => {
+        const select = div.querySelector('.ventaProducto');
+        select.innerHTML = products.map(p => 
+            `<option value="${p.id}">${p.name} (Stock: ${p.stock})</option>`
+        ).join('');
     });
-    
-    const result = await response.json();
-    if (result.error) {
-        alert(result.error);
-    } else {
-        let mensaje = result.message;
-        if (result.alert) {
-            mensaje += `\n\n${result.alert}`;
-        }
-        alert(mensaje);
-        loadSales();
-        loadProducts(); // Para actualizar el stock
-        this.reset();
-    }
+}
+// Envía la venta al backend
+async function submitSale() {
+  const cedula = document.getElementById('ventaCliente').value;
+  const items = [];
+  document.querySelectorAll('#tablaProductosVenta tbody tr').forEach(tr => {
+    items.push({
+      product_id: parseInt(tr.querySelector('.ventaProducto').value),
+      quantity: parseInt(tr.querySelector('.ventaCantidad').value)
+    });
+  });
+  if (!cedula || items.length === 0) {
+    return alert("Selecciona cliente y al menos un producto.");
+  }
+
+  const res = await fetch('/ventas', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ customer_cedula: cedula, items })
+  });
+  const result = await res.json();
+  if (!res.ok) return alert(result.detail || 'Error');
+
+  alert(`${result.message}\nTotal: $${result.total.toFixed(2)}`);
+  document.querySelector('#tablaProductosVenta tbody').innerHTML = '';
+  loadSales(); loadProducts();
 }
 
 function updateCustomerSelect(customers) {
@@ -237,11 +245,13 @@ function updateCustomerSelect(customers) {
 }
 
 function updateProductSelect(products) {
-    const select = document.getElementById('ventaProducto');
-    select.innerHTML = products.map(p => 
-        `<option value="${p.id}">${p.name} (Stock: ${p.stock})</option>`
-    ).join('');
+    document.querySelectorAll('.ventaProducto').forEach(select => {
+        select.innerHTML = products.map(p => 
+            `<option value="${p.id}">${p.name} (Stock: ${p.stock})</option>`
+        ).join('');
+    });
 }
+
 
 async function buscarPorCodigo(event) {
     event.preventDefault();
@@ -272,4 +282,28 @@ async function buscarPorCodigo(event) {
         resultadoDiv.innerHTML = `<p style="color:red;">Error al buscar el producto.</p>`;
         console.error("Error en fetch:", error);
     }
+}
+
+
+// Crea una nueva fila en la tabla
+function addProductLine() {
+  fetch('/inventario').then(res => res.json()).then(products => {
+    const tbody = document.querySelector('#tablaProductosVenta tbody');
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>
+        <select class="ventaProducto">
+          ${products.map(p =>
+            `<option value="${p.id}">${p.name} (Stock: ${p.stock})</option>`
+          ).join('')}
+        </select>
+      </td>
+      <td><input type="number" class="ventaCantidad" min="1" value="1"></td>
+      <td><button class="btnRemove">Eliminar</button></td>
+    `;
+
+    tr.querySelector('.btnRemove').addEventListener('click', () => tr.remove());
+    tbody.appendChild(tr);
+  });
 }

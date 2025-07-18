@@ -29,11 +29,11 @@
             
             <h3>Inventario</h3>
             <h3>Buscar Producto por Código de Barras</h3>
-                <form id="buscarCodigoForm">
-                    <input type="text" id="codigoBusqueda" placeholder="Escanea o escribe el código EAN13" required>
-                    <button type="submit">Buscar</button>
-                </form>
-                <div id="resultadoBusqueda"></div>
+            <form id="buscarCodigoForm">
+                <input type="text" id="codigoBusqueda" placeholder="Escanea o escribe el código EAN13" required>
+                <button type="submit">Buscar</button>
+            </form>
+            <div id="resultadoBusqueda"></div>
 
             <div id="inventarioLista"></div>
         </div>
@@ -56,15 +56,43 @@
         <!-- Sección Ventas -->
         <div id="ventas" class="tab-content">
             <h2>Registro de Ventas</h2>
-            <form id="ventaForm">
+
+            <div>
+                <label>Cliente: </label>
                 <select id="ventaCliente" required></select>
-                <select id="ventaProducto" required></select>
-                <input type="number" id="ventaCantidad" placeholder="Cantidad" required>
-                <button type="submit">Registrar Venta</button>
-            </form>
-            
+            </div>
+
+            <table id="tablaProductosVenta">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filas agregadas aquí -->
+                </tbody>
+            </table>
+
+            <button type="button" id="btnAddLinea">+ Producto</button>
+            <button type="button" id="btnRegistrarVenta">Registrar Venta</button>
+
             <h3>Historial de Ventas</h3>
-            <div id="ventasLista"></div>
+            <table id="tablaVentas">
+                <thead>
+                    <tr>
+                        <th>ID Venta</th>
+                        <th>Cliente</th>
+                        <th>Detalle</th>
+                        <th>Total</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Aquí se insertan las ventas -->
+                </tbody>
+            </table>
         </div>
     </div>
 
