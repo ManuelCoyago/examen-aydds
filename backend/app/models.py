@@ -23,6 +23,7 @@ class Product(Base):
     stock = Column(Integer)
     barcode_value = Column(String, unique=True)
     barcode_path = Column(String)
+    is_active = Column(Integer, default=1)
 
 class SaleGroup(Base):
     __tablename__ = "sale_groups"

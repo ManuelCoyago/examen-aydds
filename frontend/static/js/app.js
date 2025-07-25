@@ -32,7 +32,7 @@ function openTab(tabName) {
 
 // Funciones para productos
 async function loadProducts() {
-    const response = await fetch('/inventario');
+    const response = await fetch('/productos');
     const products = await response.json();
     
     const productList = document.getElementById('inventarioLista');
@@ -46,24 +46,30 @@ async function loadProducts() {
                     <th>Precio</th>
                     <th>Stock</th>
                     <th>Código de Barras</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                ${products.map(product => `
-                    <tr>
-                        <td>${product.id}</td>
-                        <td>${product.name}</td>
-                        <td>${product.description}</td>
-                        <td>$${product.price.toFixed(2)}</td>
-                        <td>${product.stock}</td>
-                        <td>
-                            ${product.barcode_path ? 
-                                `<img src="/codigo-de-barras/${product.barcode_path}" alt="Código de barras" class="barcode">` : 
-                                'No disponible'}
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
+    ${products.map(product => `
+        <tr>
+            <td>${product.id}</td>
+            <td>${product.name}</td>
+            <td>${product.description}</td>
+            <td>$${product.price.toFixed(2)}</td>
+            <td>${product.stock}</td>
+            <td>
+                ${product.barcode_path ? 
+                    `<img src="/codigo-de-barras/${product.barcode_path}" alt="Código de barras" class="barcode">` : 
+                    'No disponible'}
+            </td>
+            <td>
+                <button onclick='loadProductToEdit(${JSON.stringify(product)})'>✏️</button>
+                <button onclick='descontinuarProducto("${product.barcode_value}")'>❌</button>
+            </td>
+        </tr>
+    `).join('')}
+</tbody>
+
         </table>
     `;
     
@@ -71,29 +77,62 @@ async function loadProducts() {
     updateProductSelect(products);
 }
 
+function loadProductToEdit(product) {
+    document.getElementById('productoNombre').value = product.name;
+    document.getElementById('productoDescripcion').value = product.description;
+    document.getElementById('productoPrecio').value = product.price;
+    document.getElementById('productoStock').value = product.stock;
+
+    // Guardar el ID en un campo oculto
+    let idField = document.getElementById('productoIdEdit');
+    if (!idField) {
+        idField = document.createElement('input');
+        idField.type = 'hidden';
+        idField.id = 'productoIdEdit';
+        document.getElementById('productoForm').appendChild(idField);
+    }
+    idField.value = product.id;
+
+    // Cambiar el texto del botón
+    document.querySelector('#productoForm button[type="submit"]').textContent = "Actualizar Producto";
+}
+
+
+
 async function addProduct(event) {
     event.preventDefault();
-    
+
+    const idEdit = document.getElementById('productoIdEdit')?.value;
+    const method = idEdit ? 'PUT' : 'POST';
+    const url = idEdit ? `/productos/${idEdit}` : '/productos';
+
     const product = {
         name: document.getElementById('productoNombre').value,
         description: document.getElementById('productoDescripcion').value,
         price: parseFloat(document.getElementById('productoPrecio').value),
         stock: parseInt(document.getElementById('productoStock').value)
     };
-    
-    const response = await fetch('/productos', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+
+    const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product)
     });
-    
+
     const result = await response.json();
     alert(result.message);
+
     loadProducts();
     this.reset();
+
+    // Eliminar ID oculto si fue edición
+    const idField = document.getElementById('productoIdEdit');
+    if (idField) idField.remove();
+
+    // Restaurar texto del botón
+    document.querySelector('#productoForm button[type="submit"]').textContent = "Agregar Producto";
 }
+
 
 // Funciones para clientes (similar a productos)
 async function loadCustomers() {
@@ -367,4 +406,79 @@ function descargarReportePDF() {
             console.error('Error al descargar el PDF:', error);
             Swal.fire('Error', 'No se pudo generar el reporte PDF.', 'error');
         });
+}
+function descontinuarProducto(barcode) {
+    Swal.fire({
+        title: '¿Descontinuar producto?',
+        text: 'Esto ocultará el producto del catálogo, pero no eliminará ventas pasadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, descontinuar',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const response = await fetch(`/productos/por-codigo/${barcode}/descontinuar`, {
+                method: 'PUT'
+            });
+
+            const resultData = await response.json();
+
+            if (response.ok) {
+                Swal.fire('Descontinuado', resultData.message, 'success');
+                loadProducts();  // recarga la lista de productos activos
+            } else {
+                Swal.fire('Error', resultData.detail || 'No se pudo descontinuar', 'error');
+            }
+        }
+    });
+}
+
+let descontinuadosVisibles = false;
+
+async function toggleProductosDescontinuados() {
+    const tabla = document.getElementById("tablaDescontinuados");
+    const boton = document.getElementById("btnToggleDescontinuados");
+    const tbody = tabla.querySelector("tbody");
+
+    if (!descontinuadosVisibles) {
+        // Mostrar productos descontinuados
+        const res = await fetch("/productos/descontinuados");
+        const data = await res.json();
+
+        tbody.innerHTML = "";
+        data.forEach(p => {
+            const fila = document.createElement("tr");
+            fila.innerHTML = `
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.description}</td>
+                <td>
+                    <button onclick="reactivarProducto(${p.id})">Reactivar</button>
+                </td>
+            `;
+            tbody.appendChild(fila);
+        });
+
+        tabla.style.display = "table";  // Mostrar tabla
+        boton.textContent = "Ocultar productos descontinuados";
+        descontinuadosVisibles = true;
+    } else {
+        // Ocultar tabla y limpiar contenido
+        tabla.style.display = "none";
+        tbody.innerHTML = "";
+        boton.textContent = "Ver productos descontinuados";
+        descontinuadosVisibles = false;
+    }
+}
+
+async function reactivarProducto(id) {
+    const res = await fetch(`/productos/${id}/reactivar`, { method: "PUT" });
+    if (res.ok) {
+        alert("Producto reactivado con éxito");
+        toggleProductosDescontinuados();
+        loadProducts();  // recargar productos activos
+    } else {
+        const err = await res.json();
+        alert("Error: " + err.detail);
+    }
 }

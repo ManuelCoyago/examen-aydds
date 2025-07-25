@@ -40,6 +40,19 @@
             <div id="inventarioLista"></div>
             <button type="button" id="btnDescargarPDF">Descargar Reporte de Códigos de Barras (PDF)</button>
 
+            <button id="btnToggleDescontinuados" onclick="toggleProductosDescontinuados()">Ver productos descontinuados</button>
+
+            <table id="tablaDescontinuados" style="display:none;">
+            <thead>
+                <tr>
+                <th>ID</th><th>Nombre</th><th>Descripción</th><th>Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+
+
+
         </div>
         
         <!-- Sección Clientes -->

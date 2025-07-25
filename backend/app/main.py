@@ -98,6 +98,40 @@ def add_product(p: ProductIn, db: Session = Depends(get_db)):
         }
     }
 
+@app.put("/productos/{product_id}")
+def update_product(product_id: int, p: ProductIn, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    product.name = p.name
+    product.description = p.description
+    product.price = p.price
+    product.stock = p.stock
+    db.commit()
+    db.refresh(product)
+
+    return {"message": "Producto actualizado", "product_id": product.id}
+
+@app.put("/productos/por-codigo/{barcode}/descontinuar")
+def deactivate_product(barcode: str, db: Session = Depends(get_db)):
+    producto = db.query(models.Product).filter(models.Product.barcode_value == barcode).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    producto.is_active = 0
+    db.commit()
+    return {"message": f"Producto '{producto.name}' descontinuado correctamente"}
+
+
+@app.get("/productos")
+def list_active_products(db: Session = Depends(get_db)):
+    products = db.query(Product).filter(Product.is_active == 1).all()
+    return products
+
+
+
+
 
 @app.get("/codigo-de-barras/{filename}")
 def get_barcode_image(filename: str):
@@ -113,9 +147,23 @@ def get_product_by_code(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return product
 
-@app.get("/productos", response_model=list[ProductOut])
-def list_products(db: Session = Depends(get_db)):
-    return db.query(models.Product).all()
+@app.put("/productos/{product_id}/reactivar")
+def reactivate_product(product_id: int, db: Session = Depends(get_db)):
+    producto = db.query(models.Product).get(product_id)
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    producto.is_active = 1
+    db.commit()
+    return {"message": f"Producto '{producto.name}' reactivado correctamente"}
+
+
+@app.get("/productos/descontinuados")
+def get_inactive_products(db: Session = Depends(get_db)):
+    productos = db.query(models.Product).filter(models.Product.is_active == 0).all()
+    return productos
+
+
+
 
 @app.get("/inventario")
 def get_inventory(db: Session = Depends(get_db)):
@@ -146,9 +194,14 @@ def register_sale(s: SaleIn, db: Session = Depends(get_db)):
     db.flush()  # Para obtener el ID del grupo
 
     for item in s.items:
-        product = db.query(models.Product).get(item.product_id)
+        product = db.query(models.Product).filter(
+            models.Product.id == item.product_id,
+            models.Product.is_active == 1  # Solo productos activos
+        ).first()
+
         if not product:
-            raise HTTPException(status_code=404, detail=f"Producto con ID {item.product_id} no encontrado")
+            raise HTTPException(status_code=404, detail=f"Producto con ID {item.product_id} no encontrado o inactivo")
+
         if product.stock < item.quantity:
             raise HTTPException(status_code=400, detail=f"Stock insuficiente para {product.name} (ID {product.id})")
 
@@ -159,7 +212,8 @@ def register_sale(s: SaleIn, db: Session = Depends(get_db)):
         sale = models.Sale(
             group_id=group.id,
             product_id=product.id,
-            quantity=item.quantity
+            quantity=item.quantity,
+            price=product.price  # <-- Guarda el precio histórico aquí
         )
         db.add(sale)
         db.flush()
@@ -187,6 +241,7 @@ def register_sale(s: SaleIn, db: Session = Depends(get_db)):
         "details": sale_details,
         "total": total
     }
+    
 
 
 
@@ -278,3 +333,4 @@ def descargar_pdf_codigos_barras(db: Session = Depends(get_db)):
         filename=filename,
         media_type="application/pdf"
     )
+
