@@ -1,92 +1,156 @@
+/* Usa variables CSS para colores */
+:root {
+  --color-primary: #4CAF50;
+  --color-primary-dark: #45a049;
+  --color-bg: #f5f5f5;
+  --color-text: #333;
+  --color-border: #ddd;
+  --radius: 6px;
+}
+
+/* General */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f5f5f5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
+/* Contenedor central */
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  max-width: 1140px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+/* Títulos */
 h1, h2, h3 {
-    color: #333;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  font-weight: 600;
 }
 
+/* Tabs mejorados */
 .tabs {
-    margin-bottom: 20px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  border-bottom: 2px solid var(--color-border);
 }
 
 .tab-button {
-    padding: 10px 20px;
-    background: #ddd;
-    border: none;
-    cursor: pointer;
-    margin-right: 5px;
+  padding: 0.5rem 1.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  transition: border-color 0.3s ease;
+  color: var(--color-text);
+}
+
+.tab-button:hover {
+  color: var(--color-primary);
 }
 
 .tab-button.active {
-    background: #4CAF50;
-    color: white;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
+/* Contenido de tabs */
 .tab-content {
-    display: none;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+  display: none;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
 }
 
+.tab-content.active {
+  display: block;
+}
+
+/* Formularios con estilos modernos */
 form {
-    margin-bottom: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
+  margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
 }
 
 input, select, button {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
 }
 
 button {
-    background: #4CAF50;
-    color: white;
-    cursor: pointer;
-    border: none;
+  background: var(--color-primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  border: none;
+  transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background: #45a049;
+  background: var(--color-primary-dark);
 }
 
+/* Tablas */
 table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
 }
 
 th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+  text-align: left;
 }
 
 th {
-    background-color: #f2f2f2;
+  background-color: #f9f9f9;
+  font-weight: 600;
 }
 
-tr:nth-child(even) {
-    background-color: #f9f9f9;
+tbody tr:nth-child(even) {
+  background-color: #fefefe;
 }
 
+/* Código de barras */
 .barcode {
-    max-width: 200px;
-    height: auto;
+  max-width: 200px;
+  height: auto;
+  display: block;
+  margin: 1rem 0;
+}
+
+/* Responsive: mejorar diseño en móvil */
+@media (max-width: 600px) {
+  form {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab-button {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
 }

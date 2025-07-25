@@ -18,3 +18,5 @@ rclone copy $BACKUP_FILE gdrive:/respaldos/
 #find /backups -type f -mtime +7 -name "*.sql" -exec rm {} \;
 
 echo "Respaldo y subida completados"
+
+

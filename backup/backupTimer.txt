@@ -1,0 +1,30 @@
+#!/bin/bash
+
+DB_HOST="db"
+DB_USER="user"
+DB_NAME="storedb"
+
+while true; do
+  # Calcular segundos hasta las 19:00 (7 pm) del día actual o siguiente
+  NOW=$(date +%s)
+  TARGET=$(date -d "19:00:00" +%s)
+  if [ $NOW -ge $TARGET ]; then
+    # Ya pasó la hora hoy, usa 7 pm mañana
+    TARGET=$(date -d "tomorrow 19:00:00" +%s)
+  fi
+  SLEEP_SECONDS=$(( TARGET - NOW ))
+
+  echo "Esperando $SLEEP_SECONDS segundos hasta las 7 pm..."
+  sleep $SLEEP_SECONDS
+
+  DATE=$(date +%F_%H-%M)
+  BACKUP_FILE="/backups/respaldo_${DATE}.sql"
+
+  echo "Iniciando respaldo: $BACKUP_FILE"
+  pg_dump -h $DB_HOST -U $DB_USER $DB_NAME > $BACKUP_FILE
+
+  echo "Subiendo respaldo a Google Drive..."
+  rclone copy $BACKUP_FILE gdrive:/respaldos/
+
+  echo "Respaldo completado a las $(date)"
+done
