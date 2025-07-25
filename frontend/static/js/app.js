@@ -138,40 +138,67 @@ async function addProduct(event) {
 async function loadCustomers() {
     const response = await fetch('/clientes');
     const customers = await response.json();
-    
     const customerList = document.getElementById('clientesLista');
+
     customerList.innerHTML = `
-        <table>
-            <thead>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${customers.map(customer => `
                 <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Cédula</th>
-                    <th>Teléfono</th>
+                    <td>${customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.email}</td>
+                    <td>${customer.cedula}</td>
+                    <td>${customer.phone || 'N/A'}</td>
+                    <td>
+                        <button onclick='loadCustomerToEdit(${JSON.stringify(customer)})'>✏️</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                ${customers.map(customer => `
-                    <tr>
-                        <td>${customer.id}</td>
-                        <td>${customer.name}</td>
-                        <td>${customer.email}</td>
-                        <td>${customer.cedula}</td>
-                        <td>${customer.phone || 'N/A'}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
+            `).join('')}
+        </tbody>
+    </table>
     `;
-    
-    // Actualizar select de clientes para ventas
+
     updateCustomerSelect(customers);
+}
+
+function loadCustomerToEdit(customer) {
+    document.getElementById('clienteNombre').value = customer.name;
+    document.getElementById('clienteEmail').value = customer.email;
+    document.getElementById('clienteCedula').value = customer.cedula;
+    document.getElementById('clienteTelefono').value = customer.phone;
+
+    // Campo oculto con el ID
+    let idField = document.getElementById('clienteIdEdit');
+    if (!idField) {
+        idField = document.createElement('input');
+        idField.type = 'hidden';
+        idField.id = 'clienteIdEdit';
+        document.getElementById('clienteForm').appendChild(idField);
+    }
+    idField.value = customer.id;
+
+    // Cambiar texto del botón
+    document.querySelector('#clienteForm button[type="submit"]').textContent = "Actualizar Cliente";
 }
 
 async function addCustomer(event) {
     event.preventDefault();
-    
+
+    const idEdit = document.getElementById('clienteIdEdit')?.value;
+    const method = idEdit ? 'PUT' : 'POST';
+    const url = idEdit ? `/clientes/${idEdit}` : '/clientes';
+
     const customerData = {
         name: document.getElementById('clienteNombre').value,
         email: document.getElementById('clienteEmail').value,
@@ -179,11 +206,9 @@ async function addCustomer(event) {
         phone: document.getElementById('clienteTelefono').value
     };
 
-    console.log("Datos a enviar:", JSON.stringify(customerData, null, 2));
-    
     try {
-        const response = await fetch('http://localhost:8000/clientes', {
-            method: 'POST',
+        const response = await fetch(url, {
+            method,
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -192,7 +217,6 @@ async function addCustomer(event) {
 
         if (!response.ok) {
             const errorDetails = await response.json();
-            console.error("Error completo:", errorDetails);
             throw new Error(errorDetails.detail || "Error del servidor");
         }
 
@@ -200,11 +224,18 @@ async function addCustomer(event) {
         alert(result.message);
         loadCustomers();
         event.target.reset();
+
+        // Eliminar campo ID si era edición
+        const idField = document.getElementById('clienteIdEdit');
+        if (idField) idField.remove();
+
+        // Restaurar texto del botón
+        document.querySelector('#clienteForm button[type="submit"]').textContent = "Agregar Cliente";
     } catch (error) {
-        console.error("Error completo:", error);
         alert(`Error: ${error.message}`);
     }
 }
+
 
 async function loadSales() {
     const res = await fetch('/ventas');

@@ -50,6 +50,21 @@ def add_customer(c: CustomerIn, db: Session = Depends(get_db)):
 def list_customers(db: Session = Depends(get_db)):
     return db.query(models.Customer).all()
 
+@app.put("/clientes/{id}")
+def update_customer(id: int, c: CustomerIn, db: Session = Depends(get_db)):
+    customer = db.query(models.Customer).filter(models.Customer.id == id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    for attr, value in c.model_dump().items():
+        setattr(customer, attr, value)
+
+    db.commit()
+    db.refresh(customer)
+    return {"message": "Cliente actualizado"}
+
+ 
+
 # Producto entrada (request)
 class ProductIn(BaseModel):
     name: str
