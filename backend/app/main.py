@@ -7,17 +7,18 @@ import models
 import barcode_utils
 from fastapi.responses import FileResponse
 import os
-
 from fastapi import HTTPException
-from models import Customer, Product, Sale,SaleGroup # Asegúrate de importar tus modelos
+from models import Customer, Product, Sale,SaleGroup 
+import barcodePDF_utils
+from datetime import datetime
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
-# Configuración CORS (Añade esto justo después de crear la app)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes (en producción deberías limitarlo)
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],  # Permite todos los métodos
     allow_headers=["*"],  # Permite todos los headers
@@ -260,3 +261,20 @@ def get_sale(id: int, db: Session = Depends(get_db)):
         "details": details,
         "total": total
     }
+
+# Reporte PDF de códigos de barras
+@app.get("/reporte-codigos-barras")
+def descargar_pdf_codigos_barras(db: Session = Depends(get_db)):
+    productos = db.query(Product).all()
+    if not productos:
+        raise HTTPException(status_code=404, detail="No hay productos para generar el reporte")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"reporte_codigos_barras_{timestamp}.pdf"
+    filepath = barcodePDF_utils.generar_reporte_pdf(productos, filename)
+
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type="application/pdf"
+    )

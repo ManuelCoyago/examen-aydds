@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('buscarCodigoForm').addEventListener('submit', buscarPorCodigo);
     document.getElementById('btnAddLinea').addEventListener('click', addProductLine);
     document.getElementById('btnRegistrarVenta').addEventListener('click', submitSale);
+    document.getElementById('btnDescargarPDF').addEventListener('click', descargarReportePDF);
+
 });
 
 // Funciones para cambiar pestañas
@@ -343,3 +345,26 @@ async function verificarStockBajo() {
   }
 }
 
+function descargarReportePDF() {
+    fetch('http://localhost:8000/reporte-codigos-barras')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('No se pudo generar el PDF');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'reporte_codigos_barras.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error al descargar el PDF:', error);
+            Swal.fire('Error', 'No se pudo generar el reporte PDF.', 'error');
+        });
+}
